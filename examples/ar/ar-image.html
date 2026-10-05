@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bring a picture to life</title>
+  <!-- MindAR image tracking: works in the browser on iPhone and Android.
+       Point the camera at the target picture and a 3D shape appears on it. -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: system-ui, sans-serif; }
+    .hint {
+      position: fixed; z-index: 10; left: 1rem; right: 1rem; bottom: 1rem;
+      background: rgb(255 255 255 / 0.92); color: #1b1e20; padding: 0.75rem 1rem; border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <p class="hint">
+    Allow camera access, then point your phone at
+    <a href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png" target="_blank" rel="noopener">this sample picture</a>
+    on another screen. <a href="/">Back to the app</a>
+  </p>
+  <!-- To use your own picture: make a .mind file from it with MindAR's online
+       "Image Targets Compiler", put it in public/, and change imageTargetSrc. -->
+  <a-scene
+    mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind"
+    color-space="sRGB"
+    renderer="colorManagement: true"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-plane color="#9c7424" opacity="0.5" position="0 0 0" height="0.552" width="1"></a-plane>
+      <a-box color="#243b4a" position="0 0 0.15" scale="0.3 0.3 0.3" animation="property: rotation; to: 0 360 0; loop: true; dur: 6000; easing: linear"></a-box>
+    </a-entity>
+  </a-scene>
+</body>
+</html>

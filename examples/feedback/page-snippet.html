@@ -1,0 +1,70 @@
+<!-- Feedback form: paste the style into <head>, the section into a page inside <main>,
+     and the script before </body>. Staff read the answers at /staff. -->
+
+<style>
+  #feedback-status { margin: 0; min-height: 1.5em; }
+  .rating-options { display: flex; gap: 0.5rem; }
+  .rating-options label { position: relative; }
+  .rating-options input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .rating-options span {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border: 1px solid var(--edge);
+    border-radius: 4px;
+    background: var(--surface);
+    font-weight: 600;
+  }
+  .rating-options input:checked + span { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+  .rating-options input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+</style>
+
+<section aria-labelledby="feedback-heading">
+  <h2 id="feedback-heading">Tell us what you think</h2>
+  <form id="feedback-form">
+    <fieldset class="rating">
+      <legend>How was it? 1 is poor, 5 is excellent.</legend>
+      <div class="rating-options">
+        <label><input type="radio" name="rating" value="1" required><span>1</span></label>
+        <label><input type="radio" name="rating" value="2"><span>2</span></label>
+        <label><input type="radio" name="rating" value="3"><span>3</span></label>
+        <label><input type="radio" name="rating" value="4"><span>4</span></label>
+        <label><input type="radio" name="rating" value="5"><span>5</span></label>
+      </div>
+    </fieldset>
+    <label for="comment">Anything you'd like to tell us? (optional)</label>
+    <textarea id="comment" name="comment" rows="4" maxlength="1000"></textarea>
+    <button type="submit">Send feedback</button>
+    <p id="feedback-status" role="status"></p>
+  </form>
+</section>
+
+<script>
+  (() => {
+    const form = document.getElementById('feedback-form');
+    const status = document.getElementById('feedback-status');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const button = form.querySelector('button');
+      const data = Object.fromEntries(new FormData(form));
+      button.disabled = true;
+      status.textContent = 'Sending…';
+      try {
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error);
+        form.reset();
+        status.textContent = 'Feedback sent. Thank you!';
+      } catch (err) {
+        status.textContent = err.message || 'Your feedback could not be sent. Check your connection and try again.';
+      } finally {
+        button.disabled = false;
+      }
+    });
+  })();
+</script>

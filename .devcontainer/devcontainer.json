@@ -1,0 +1,25 @@
+{
+  "name": "Workshop app",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:24-bookworm",
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code"],
+      "settings": {
+        "files.autoSave": "afterDelay",
+        "git.enableSmartCommit": true,
+        "git.confirmSync": false
+      }
+    },
+    "codespaces": {
+      "openFiles": ["README.md"]
+    }
+  },
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "Your app preview", "onAutoForward": "notify" }
+  },
+  "postCreateCommand": "npm install && bash scripts/setup-hooks.sh"
+}

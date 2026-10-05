@@ -1,0 +1,20 @@
+<!-- Weather: paste the section into a page inside <main>, and the script before </body>. -->
+
+<section aria-labelledby="weather-heading">
+  <h2 id="weather-heading">Weather outside</h2>
+  <p id="weather" aria-live="polite">Checking the weather…</p>
+</section>
+
+<script>
+  (async () => {
+    const el = document.getElementById('weather');
+    try {
+      const res = await fetch('/api/weather');
+      const w = await res.json();
+      if (!res.ok) throw new Error(w.error);
+      el.textContent = `${w.description}, ${w.temperature}${w.temperatureUnit}, wind ${w.windSpeed} ${w.windUnit}.`;
+    } catch {
+      el.textContent = 'The weather is unavailable right now.';
+    }
+  })();
+</script>

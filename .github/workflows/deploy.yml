@@ -1,0 +1,80 @@
+# Checks your app and publishes it every time you push to main.
+# Watch it run in the repo's Actions tab. Your link: https://REPO-NAME.YOUR-WEB-NAME.swissnexlab.com
+name: Check and publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+env:
+  APPS_DOMAIN: swissnexlab.com
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Look for passwords or API keys in the code
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2 detect --source /repo --redact --no-banner --verbose
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install
+        run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Run tests
+        run: npm test
+
+  publish:
+    name: Publish
+    needs: check
+    # The template repo itself is never published.
+    if: ${{ !github.event.repository.is_template }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # lets this run prove to the server which repo it is
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Prepare secrets
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+        run: node .github/scripts/write-secrets.mjs > .env
+
+      - name: Bundle the app
+        run: tar --exclude=./.git --exclude=./node_modules -czf "$RUNNER_TEMP/app.tgz" .
+
+      - name: Send to the server
+        run: |
+          token=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=museum-apps" | jq -r .value)
+          echo "::add-mask::$token"
+          curl -sS -N --fail-with-body -H "Authorization: Bearer $token" \
+            --data-binary "@$RUNNER_TEMP/app.tgz" "https://deploy.$APPS_DOMAIN/publish" | tee publish.log
+          grep -q '^PUBLISH OK' publish.log
+
+      - name: Show the public link
+        if: success()
+        run: grep -m1 '^==> Published:' publish.log | sed 's/^==> /### /' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Tidy up
+        if: always()
+        run: rm -f .env "$RUNNER_TEMP/app.tgz"

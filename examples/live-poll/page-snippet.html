@@ -1,0 +1,78 @@
+<!-- Live poll: paste the style into <head>, the section into a page inside <main>,
+     and the script before </body>. Open the page on two devices to see votes arrive. -->
+
+<style>
+  .poll-options { display: grid; gap: 0.5rem; }
+  .poll-option {
+    position: relative;
+    justify-self: stretch;
+    text-align: left;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--edge);
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+  }
+  .poll-option .bar {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    transition: width 0.4s ease;
+  }
+  .poll-option span { position: relative; }
+  @media (prefers-reduced-motion: reduce) { .poll-option .bar { transition: none; } }
+</style>
+
+<section aria-labelledby="poll-heading">
+  <h2 id="poll-heading">Live poll</h2>
+  <p id="poll-question">Connecting…</p>
+  <div id="poll-options" class="poll-options"></div>
+  <p id="poll-online" class="quiet" role="status"></p>
+</section>
+
+<script>
+  (() => {
+    const question = document.getElementById('poll-question');
+    const options = document.getElementById('poll-options');
+    const online = document.getElementById('poll-online');
+    let voted = false;
+    let retryDelay = 1000;
+
+    const connect = () => {
+      const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/live`);
+      ws.onopen = () => (retryDelay = 1000);
+      ws.onmessage = (event) => {
+        const poll = JSON.parse(event.data);
+        const total = poll.votes.reduce((a, b) => a + b, 0);
+        question.textContent = poll.question;
+        // The options are rebuilt on every vote. Remember which one the keyboard was on.
+        const focused = [...options.children].indexOf(document.activeElement);
+        options.replaceChildren(
+          ...poll.options.map((label, i) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'poll-option';
+            button.disabled = voted;
+            const share = total ? Math.round((poll.votes[i] / total) * 100) : 0;
+            button.innerHTML = `<span class="bar" style="width:${share}%"></span><span></span><span>${poll.votes[i]}</span>`;
+            button.children[1].textContent = label;
+            button.addEventListener('click', () => {
+              voted = true;
+              ws.send(JSON.stringify({ type: 'vote', option: i }));
+            });
+            return button;
+          })
+        );
+        if (focused >= 0) options.children[focused]?.focus();
+        online.textContent = poll.online === 1 ? 'You are the only one here right now.' : `${poll.online} people are here right now.`;
+      };
+      ws.onclose = () => {
+        online.textContent = 'Reconnecting…';
+        setTimeout(connect, retryDelay);
+        retryDelay = Math.min(retryDelay * 2, 30_000);
+      };
+    };
+    connect();
+  })();
+</script>
